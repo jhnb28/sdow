@@ -16,17 +16,37 @@ class Database(object):
     if not os.path.isfile(sdow_database):
       raise IOError('Specified SQLite file "{0}" does not exist.'.format(sdow_database))
 
-    if not os.path.isfile(searches_database):
-      raise IOError('Specified SQLite file "{0}" does not exist.'.format(searches_database))
+    # if not os.path.isfile(searches_database):
+    #   raise IOError('Specified SQLite file "{0}" does not exist.'.format(searches_database))
 
     self.sdow_conn = sqlite3.connect(sdow_database, check_same_thread=False)
-    self.searches_conn = sqlite3.connect(searches_database, check_same_thread=False)
+    # self.searches_conn = sqlite3.connect(searches_database, check_same_thread=False)
 
     self.sdow_cursor = self.sdow_conn.cursor()
-    self.searches_cursor = self.searches_conn.cursor()
+    # self.searches_cursor = self.searches_conn.cursor()
 
     self.sdow_cursor.arraysize = 1000
-    self.searches_cursor.arraysize = 1000
+    # self.searches_cursor.arraysize = 1000
+
+    self.print_table_and_column_names()
+
+  def print_table_and_column_names(self):
+    # Get all table names
+    self.sdow_cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+    tables = self.sdow_cursor.fetchall()
+
+    print("Tables and their columns:")
+    # Fetch column names for each table
+    for table in tables:
+      table_name = table[0]
+      print(f"\nTable: {table_name}")
+
+      self.sdow_cursor.execute(f"PRAGMA table_info({table_name});")
+      columns = self.sdow_cursor.fetchall()
+
+      # Print column names
+      column_names = [column[1] for column in columns]
+      print("Columns:", ", ".join(column_names))
 
   def fetch_page(self, page_title):
     """Returns the ID and title of the non-redirect page corresponding to the provided title,
@@ -54,6 +74,7 @@ class Database(object):
     # can be matched.
     results = self.sdow_cursor.fetchall()
 
+    print(f'results: {results}')
     if not results:
       raise ValueError(
           'Invalid page title {0} provided. Page title does not exist.'.format(page_title))

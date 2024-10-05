@@ -15,7 +15,8 @@ from sdow.helpers import InvalidRequest, fetch_wikipedia_pages_info
 
 
 # Connect to the SDOW database.
-database = Database(sdow_database='./sdow.sqlite', searches_database='./searches.sqlite')
+# database = Database(sdow_database='./sdow.sqlite', searches_database='./searches.sqlite')
+database = Database(sdow_database='/home/cpp/jerryhuang/sdow/scripts/dump/sdow.sqlite', searches_database='./searches.sqlite')
 
 # Initialize the Flask app.
 app = Flask(__name__)
@@ -151,3 +152,72 @@ def shortest_paths_route():
     logging.error('An unexpected error occurred while inserting result: {0}'.format(e))
 
   return jsonify(response)
+
+
+if __name__ == '__main__':
+  start_time = time.time()
+
+  source_title = 'china'
+  target_title = 'africa'
+
+  # Look up the IDs for each page.
+  try:
+    (source_page_id, source_page_title,
+    is_source_redirected) = database.fetch_page(source_title)
+  except ValueError:
+    raise InvalidRequest(
+        'Start page "{0}" does not exist. Please try another search.'.format(source_title)
+    )
+
+  try:
+    (target_page_id, target_page_title,
+     is_target_redirected) = database.fetch_page(target_title)
+  except ValueError:
+    raise InvalidRequest(
+        'End page "{0}" does not exist. Please try another search.'.format(target_title))
+
+  print(f'is_source_redirected: {is_source_redirected}')
+  print(f'is_target_redirected: {is_target_redirected}')
+
+  # Compute the shortest paths.
+  paths = database.compute_shortest_paths(source_page_id, target_page_id)
+
+  print(f'paths: {paths}')
+  response = {
+      'sourcePageTitle': source_page_title,
+      'targetPageTitle': target_page_title,
+      'isSourceRedirected': is_source_redirected,
+      'isTargetRedirected': is_target_redirected,
+  }
+
+  # No paths found.
+  if len(paths) == 0:
+    logging.info('No paths found from {0} to {1}'.format(source_page_id, target_page_id))
+    response['paths'] = []
+    response['pages'] = []
+  # Paths found
+  else:
+    # Get a list of all IDs.
+    page_ids_set = set()
+    for path in paths:
+      for page_id in path:
+        page_ids_set.add(str(page_id))
+
+    response['paths'] = paths
+    # response['pages'] = fetch_wikipedia_pages_info(list(page_ids_set), database)
+    t = fetch_wikipedia_pages_info(list(page_ids_set), database)
+    print(f'pages: {t}')
+
+
+  # try:
+  #   database.insert_result({
+  #     'source_id': source_page_id,
+  #     'target_id': target_page_id,
+  #     'duration': time.time() - start_time,
+  #     'paths': paths,
+  #   })
+  # except Exception as e:
+  #   # Log the error and continue.
+  #   logging.error('An unexpected error occurred while inserting result: {0}'.format(e))
+
+  # print(jsonify(response))

@@ -73,6 +73,9 @@ def breadth_first_search(source_page_id, target_page_id, database):
     forward_links_count = database.fetch_outgoing_links_count(unvisited_forward.keys())
     backward_links_count = database.fetch_incoming_links_count(unvisited_backward.keys())
 
+    if not forward_links_count or not backward_links_count:
+      return [[]]
+
     if forward_links_count < backward_links_count:
       #---  FORWARD BREADTH FIRST SEARCH  ---#
       forward_depth += 1

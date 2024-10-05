@@ -6,24 +6,12 @@ set -euo pipefail
 # UNIX commands.
 export LC_ALL=C
 
-# By default, the latest Wikipedia dump will be downloaded. If a download date in the format
-# YYYYMMDD is provided as the first argument, it will be used instead.
-if [[ $# -eq 0 ]]; then
-  DOWNLOAD_DATE=$(wget -q -O- https://dumps.wikimedia.your.org/enwiki/ | grep -Po '\d{8}' | sort | tail -n1)
-else
-  if [ ${#1} -ne 8 ]; then
-    echo "[ERROR] Invalid download date provided: $1"
-    exit 1
-  else
-    DOWNLOAD_DATE=$1
-  fi
-fi
+DOWNLOAD_DATE=${1:-20181220}
 
-ROOT_DIR=`pwd`
+ROOT_DIR=$(pwd)
 OUT_DIR="dump"
 
-DOWNLOAD_URL="https://dumps.wikimedia.your.org/enwiki/$DOWNLOAD_DATE"
-TORRENT_URL="https://tools.wmflabs.org/dump-torrents/enwiki/$DOWNLOAD_DATE"
+DOWNLOAD_URL="https://archive.org/download/enwiki-$DOWNLOAD_DATE"
 
 SHA1SUM_FILENAME="enwiki-$DOWNLOAD_DATE-sha1sums.txt"
 REDIRECTS_FILENAME="enwiki-$DOWNLOAD_DATE-redirect.sql.gz"
@@ -47,33 +35,13 @@ echo
 
 function download_file() {
   if [ ! -f $2 ]; then
-    echo
-    if [ $1 != sha1sums ] && command -v aria2c > /dev/null; then
-      echo "[INFO] Downloading $1 file via torrent"
-      time aria2c --summary-interval=0 --console-log-level=warn --seed-time=0 \
-        "$TORRENT_URL/$2.torrent"
-    else
-      echo "[INFO] Downloading $1 file via wget"
-      time wget --progress=dot:giga "$DOWNLOAD_URL/$2"
-    fi
-
-    if [ $1 != sha1sums ]; then
-      echo
-      echo "[INFO] Verifying SHA-1 hash for $1 file"
-      time grep "$2" "$SHA1SUM_FILENAME" | sha1sum -c
-      if [ $? -ne 0 ]; then
-        echo
-        echo "[ERROR] Downloaded $1 file has incorrect SHA-1 hash"
-        rm $2
-        exit 1
-      fi
-    fi
+    echo "[INFO] Downloading $1 file via wget"
+    time wget --progress=dot:giga "$DOWNLOAD_URL/$2"
   else
     echo "[WARN] Already downloaded $1 file"
   fi
 }
 
-download_file "sha1sums" $SHA1SUM_FILENAME
 download_file "redirects" $REDIRECTS_FILENAME
 download_file "pages" $PAGES_FILENAME
 download_file "links" $LINKS_FILENAME

@@ -29,12 +29,14 @@ if not REDIRECTS_FILE.endswith('.gz'):
 # Create a dictionary of redirects.
 REDIRECTS = {}
 for line in io.BufferedReader(gzip.open(REDIRECTS_FILE, 'r')):
+  line = line.decode('utf-8')  # Decode bytes to string
   [source_page_id, _] = line.rstrip('\n').split('\t')
   REDIRECTS[source_page_id] = True
 
 # Loop through the pages file, ignoring pages which are marked as redirects but which do not have a
 # corresponding redirect in the redirects dictionary, printing the remaining pages to stdout.
 for line in io.BufferedReader(gzip.open(PAGES_FILE, 'r')):
+  line = line.decode('utf-8')  # Decode bytes to string
   [page_id, page_title, is_redirect] = line.rstrip('\n').split('\t')
 
   if is_redirect == '0' or page_id in REDIRECTS:
